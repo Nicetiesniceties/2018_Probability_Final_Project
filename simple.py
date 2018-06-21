@@ -2,6 +2,7 @@
 import random
 import numpy as np
 import random
+import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +16,16 @@ def simple_oracle(Mr, Mrs, Mr_to_Mrs_Right):# given number and the right_list, r
 		return False;
 	else:
 		return True;
+def skew_algorithm(decision_map):#{{{
+	my_picks = []
+	for i in range(people):
+		for j in range(i + 1):
+			if(decision_map[i][j + i] == 0):
+				my_picks.append([i, j])
+			if(len(my_picks) == query):
+				return my_picks
+	return my_picks
+#}}}
 def sequential_algorithm(decision_map):# a algorithm given the decision_map, returning the next 10 picks #{{{
 	my_picks = []
 	for i in range(people):
@@ -53,30 +64,49 @@ def max_mispicks_algorithm(decision_map):#{{{
 			if(mispicks_map[i][j] >= MIN):
 				mypicks[mispicks_mypicks.index(MIN)] = [i, j]
 				mispicks_mypicks[mispicks_mypicks.index(MIN)] = mispicks_map[i][j]
-	print(mypicks)
+	# print(mypicks)
 	return mypicks
 #}}}
 def scatter_algorithm(decision_map):#{{{
-	mypicks = [[-1, -1]] * size
-	mispicks_mypicks = [201] * size
-	decision_map_T = decision_map[::-1]
-	fake_decision_map = decision_map
-	mispicks_map = [[0 for i in range(size * size)] for j in range(size * size)]
-	for i in range(size * size):
-		for j in range(size * size):
+	count = 0
+	for i in range(people):
+		for j in range(people):
+			if(decision_map[i][j] == 0):
+				count += 1
+			if(count == query):
+				break
+		if(count == query):
+			break
+	mypicks = [[-1, -1]] * count
+	mispicks_mypicks = [2 * people] * count
+	decision_map_T =  decision_map[::-1]
+	mispicks_map = [[0 for i in range(people)] for j in range(people)]
+	for i in range(people):
+		for j in range(people):
 			if(decision_map[i][j] == 1):
-				mispicks_map[i][j] = 201
+				mispicks_map[i][j] = 2 * people + 1
 			elif(decision_map[i][j] == -1):
-				mispicks_map[i][j] == 201
+				mispicks_map[i][j] == 2 * people + 1
 			else:
 				mispicks_map[i][j] += decision_map[i].count(-1) + decision_map_T[j].count(-1)
-	for i in range(size * size):
-		for j in range(size * size):
+	for i in range(people):
+		for j in range(people):
 			MAX = max(mispicks_mypicks)
 			if(mispicks_map[i][j] <= MAX):
-				mypicks[mispicks_mypicks.index(MAX)] = [i, j]
-				mispicks_mypicks[mispicks_mypicks.index(MAX)] = mispicks_map[i][j]
-	# print(mypicks)
+				max_index = mispicks_mypicks.index(MAX)
+				ii = mypicks[max_index][0]
+				jj = mypicks[max_index][1]
+				print(ii, jj)
+				mypicks[max_index] = [i, j]
+				mispicks_mypicks[max_index] = mispicks_map[i][j]
+				for n in range(people):
+					mispicks_map[n][j] += 1
+					if(jj in range(0, people)):
+						mispicks_map[n][jj] -= 1
+					mispicks_map[i][n] += 1
+					if(ii in range(0, people)):
+						mispicks_map[ii][n] -= 1
+	print(mypicks)
 	return mypicks
 #}}}
 def random_algorithm(decision_map):# a algorithm given the decision_map, returning the next 10 picks #{{{
@@ -127,9 +157,11 @@ def random_experiment(algorithm, iteration):# given the algorithm and iteration 
 	sample_space, mean = [], 0
 	history = np.zeros(100)
 	for i in range(iteration):
+		current_time1 = time.clock()
 		n, temp = event(algorithm)
 		history += temp
-		print("Iteration %d: outcome is %d rounds" %(i, n))
+		current_time2 = time.clock()
+		print("Iteration %d: outcome is %d rounds, time: %.2gs" %(i, n, current_time2 - current_time1))
 		sample_space.append(n)
 		mean += n
 	dev = statistics.stdev(sample_space)
@@ -156,6 +188,7 @@ def draw_history(mean, iteration, history, name): # draw your history and save i
 	plt.xlabel("Rounds Taken")
 	plt.ylabel("The i-th Perfect Match Found")
 	plt.axvline(x = mean, color = "#fccf0d")
+	plt.legend()##
 	fig = plt.gcf()
 	plt.savefig(name + '.png')
 	plt.gcf().clear()
@@ -164,7 +197,8 @@ if __name__ == '__main__':
 	people = 100
 	query = 10
 	iteration = 1000
-	name = "Sequential Method"
+	name = "Scatter Algorithm"
 	mean, sample_space, dev, history = random_experiment(sequential_algorithm, iteration)
 	draw_histogram(mean, sample_space, dev, iteration, name  + "\n" + str(datetime.now()))
 	draw_history(mean, iteration, history, name + " History \n" + str(datetime.now()))
+	
